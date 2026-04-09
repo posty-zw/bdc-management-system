@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/akhee/Downloads/FinalBDC_Module4.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="5310"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="Transactions" custom_title="0" dock_id="4" table="4,12:mainTransactions"/><dock_state state="000000ff00000000fd0000000100000002000003c900000226fc0100000004fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000000002b20000000000000000fb000000160064006f0063006b00420072006f00770073006500330100000000000003b30000000000000000fb000000160064006f0063006b00420072006f00770073006500340100000000000003c90000011e00ffffff000002580000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="AuditLog" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="51"/><column index="2" value="99"/><column index="3" value="70"/><column index="4" value="117"/><column index="5" value="61"/><column index="6" value="156"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="CashInventory" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="89"/><column index="2" value="107"/><column index="3" value="94"/><column index="4" value="156"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Currency" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="86"/><column index="2" value="148"/><column index="3" value="49"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Customer" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="75"/><column index="2" value="70"/><column index="3" value="78"/><column index="4" value="140"/><column index="5" value="70"/><column index="6" value="234"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="ExchangeRates" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="48"/><column index="2" value="93"/><column index="3" value="94"/><column index="4" value="109"/><column index="5" value="156"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="KYCAuditLog" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="42"/><column index="2" value="99"/><column index="3" value="156"/><column index="4" value="163"/><column index="5" value="54"/><column index="6" value="99"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Transactions" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="87"/><column index="2" value="99"/><column index="3" value="99"/><column index="4" value="131"/><column index="5" value="105"/><column index="6" value="156"/><column index="7" value="102"/><column index="8" value="76"/><column index="9" value="71"/><column index="10" value="76"/><column index="11" value="109"/><column index="12" value="101"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1*">--Customer Onboarding and Initial Exchange TRANSACTION
+--1. Create new customer with KYC check
+INSERT INTO Customer(
+    CustomerID, FirstName, LastName, PhoneNumber, Address, KYCStatus)
+    VALUES(73, &quot;Beefy&quot;, &quot;Jogger&quot;, &quot;+16147477376&quot;, &quot;123 Albion St, Boston&quot;, &quot;Pending&quot;);
+
+-- Log KYC verification
+INSERT INTO KYCAuditLog(
+    LogID, FK_CustomerID, CheckDate, CheckType, Result, FK_EmployeeID)
+    VALUES(64, 73, CURRENT_TIMESTAMP, &quot;DocumentVerification&quot;, &quot;Pass&quot;, 5);
+
+-- Update customer KYC Status
+UPDATE Customer
+SET KYCStatus = &quot;Verified&quot;
+WHERE CustomerID = 73;
+
+-- Verify customer KYC status before processing large transaction
+SELECT t.TransactionID, c.CustomerID, c.FirstName, c.LastName, c.KYCStatus, t.AmountReceived,
+	CASE
+		WHEN t.AmountReceived &gt; 500 AND c.KYCStatus != &quot;Verified&quot;
+		THEN &quot;Hold&quot;
+		ELSE &quot;Proceed&quot;
+	END as TransactionAction
+FROM Transactions t
+JOIN Customer c ON t.FK_CustomerID=c.CustomerID
+WHERE t.TransactionID= 63;
+
+-- Process USD to ZAR exchange transaction
+INSERT INTO Transactions( TransactionID, FK_CustomerID, FK_EmployeeID, FK_CurrencyReceived,
+    FK_CurrencyPaid, DateTime, AmountReceived, AmountPaid, FK_RateID, AppliedRate,
+    TransactionStatus, PaymentMode)
+    VALUES(63, 73, 5, &quot;USD&quot;, &quot;ZAR&quot;, CURRENT_TIMESTAMP, 1000, 16000.00, 20, 16.00, &quot;Completed&quot;, &quot;CASH&quot;);
+
+--Update cash inventory after disbursement
+-- Log transaction in audit trail
+
+</sql><sql name="metric&amp;analytics.sql" filename="C:/Users/akhee/OneDrive/Desktop/itc6000/metric&amp;analytics.sql">-- Reference to file &quot;C:/Users/akhee/OneDrive/Desktop/itc6000/metric&amp;analytics.sql&quot; (not supported by this version) --</sql><current_tab id="1"/></tab_sql></sqlb_project>
